@@ -1,0 +1,222 @@
+Set up cloudcore (controller) (with microk8s?)
+1. Install microk8s
+	snap install microk8s --classic --channel=1.30
+	sudo usermod -a -G microk8s dino
+	mkdir ~/.kube
+	sudo chown -R dino ~/.kube
+	sudo microk8s config >> ~/.kube/config
+	sudo snap alias microk8s.kubectl kubectl
+	#(disable HA?)
+
+2. Install keadm
+	wget https://github.com/kubeedge/kubeedge/releases/download/v1.17.0/keadm-v1.17.0-linux-amd64.tar.gz
+	tar -zxvf keadm-v1.17.0-linux-amd64.tar.gz
+	sudo mkdir -p /usr/local/bin
+	sudo cp keadm-v1.17.0-linux-amd64/keadm/keadm /usr/local/bin/keadm
+
+Set up cloudcore
+	CLOUD_CONTROLLER_IP=$(sudo kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+	keadm init --advertise-address=${CLOUD_CONTROLLER_IP} --kube-config=$HOME/.kube/config --set cloudCore.modules.dynamicController.enable=true
+	echo "Setup complete! I advise you to reboot, that way microk8s/kubectl can run without sudo.
+Please continue by adding the edge nodes. After that, return to the controller to activate edgemesh for all the registered nodes"
+	
+### ADD EDGE NODES HERE ###
+
+Set up edgemesh
+	psk_file="$HOME/edgemesh_psk.txt"
+	if [[ -f "$psk_file" ]]; then
+	psk=$(cat "$psk_file")
+	else
+	psk=$(openssl rand -base64 32)
+	echo "$psk" >> "$psk_file"
+	fi
+	if sudo microk8s helm3 ls --namespace kubeedge | grep -q 'edgemesh'; then
+	helm_cmd="sudo microk8s helm3 upgrade"
+	else
+	helm_cmd="sudo microk8s helm3 install"
+	fi
+	helm_cmd+=" edgemesh --namespace kubeedge --set agent.psk=$psk"
+	helm_cmd_nodes=( $(sudo kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name},{.status.addresses[?(@.type=="InternalIP")].address}{"\n"}{end}') )
+	for i in "${!helm_cmd_nodes[@]}"; do
+	IFS=',' read -r hostname ip <<< "${helm_cmd_nodes[$i]}"
+	helm_cmd+=" --set agent.relayNodes[$i].nodeName=$hostname,agent.relayNodes[$i].advertiseAddress=\"{$ip}\""
+	done
+	helm_cmd+=" https://raw.githubusercontent.com/kubeedge/edgemesh/main/build/helm/edgemesh.tgz"
+	eval "$helm_cmd"
+	
+
+
+
+
+
+
+
+
+
+
+
+Set up edgecore (worker nodes)
+
+1. Install keadm
+	wget https://github.com/kubeedge/kubeedge/releases/download/v1.17.0/keadm-v1.17.0-linux-amd64.tar.gz
+	tar -zxvf keadm-v1.17.0-linux-amd64.tar.gz
+	sudo mkdir -p /usr/local/bin
+	sudo cp keadm-v1.17.0-linux-amd64/keadm/keadm /usr/local/bin/keadm
+2. Set up container runtime
+	a. Install containerd
+		wget https://github.com/containerd/containerd/releases/download/v1.7.18/containerd-1.7.18-linux-amd64.tar.gz
+		sudo tar Cxzvf /usr/local containerd-1.7.18-linux-amd64.tar.gz
+	b. Set up systemd
+		sudo mkdir -p /usr/local/lib/systemd/system
+		sudo wget -O /usr/local/lib/systemd/system/containerd.service https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+		sudo systemctl daemon-reload
+		sudo systemctl enable --now containerd
+	c. Install runc
+		wget https://github.com/opencontainers/runc/releases/download/v1.1.13/runc.amd64
+		sudo mkdir -p /usr/local/sbin
+		sudo install -m 755 runc.amd64 /usr/local/sbin/runc
+	d. Install and configure CNI plugins
+		wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz
+		sudo mkdir -p /opt/cni/bin
+		sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.5.1.tgz
+		sudo mkdir -p /etc/cni/net.d/
+		sudo sh -c 'cat >/etc/cni/net.d/bridge.conf <<EOF
+{
+  "cniVersion": "0.3.1",
+  "name": "containerd-net",
+  "type": "bridge",
+  "bridge": "cni0",
+  "isGateway": true,
+  "ipMasq": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.88.0.0/16",
+    "routes": [
+      { "dst": "0.0.0.0/0" }
+    ]
+  }
+}'
+EOF
+	e. Generate configuration
+		sudo mkdir -p /etc/containerd
+		sudo touch /etc/containerd/config.toml
+		sudo sh -c 'containerd config default > /etc/containerd/config.toml'
+		sudo systemctl restart containerd
+3. Join controller cloud
+	sudo keadm join --cloudcore-ipport="<CLOUD_CONTROLLER_IP>":10000 --token=<token> --kubeedge-version=v1.17.0 --remote-runtime-endpoint=unix:///run/containerd/containerd.sock
+	
+4. Configure for edgemesh
+	sudo snap install yq
+	sudo cat /etc/kubeedge/config/edgecore.yaml | yq '.modules.metaManager.metaServer.enable=true' | sudo tee /etc/kubeedge/config/edgecore.tmp
+	sudo mv /etc/kubeedge/config/edgecore.tmp /etc/kubeedge/config/edgecore.yaml
+	sudo cat /etc/kubeedge/config/edgecore.yaml | yq '.modules.edged.tailoredKubeletConfig.clusterDNS[0]="169.254.96.16"' | sudo tee /etc/kubeedge/config/edgecore.tmp
+	sudo mv /etc/kubeedge/config/edgecore.tmp /etc/kubeedge/config/edgecore.yaml
+	sudo cat /etc/kubeedge/config/edgecore.yaml | yq '.modules.edged.tailoredKubeletConfig.clusterDomain="cluster.local"' | sudo tee /etc/kubeedge/config/edgecore.tmp
+	sudo mv /etc/kubeedge/config/edgecore.tmp /etc/kubeedge/config/edgecore.yaml
+	sudo systemctl restart edgecore.service
+
+##########################################
+### Total cloudcore command copy/paste ###
+##########################################
+snap install microk8s --classic --channel=1.30
+sudo usermod -a -G microk8s dino
+mkdir ~/.kube
+sudo chown -R dino ~/.kube
+sudo microk8s config >> ~/.kube/config
+sudo snap alias microk8s.kubectl kubectl
+wget https://github.com/kubeedge/kubeedge/releases/download/v1.17.0/keadm-v1.17.0-linux-amd64.tar.gz
+tar -zxvf keadm-v1.17.0-linux-amd64.tar.gz
+sudo mkdir -p /usr/local/bin
+sudo cp keadm-v1.17.0-linux-amd64/keadm/keadm /usr/local/bin/keadm
+### Next lines use IP address parameters. Double check that they are the IP's you want. ###
+CLOUD_CONTROLLER_IP=$(sudo kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+keadm init --advertise-address=${CLOUD_CONTROLLER_IP} --kube-config=$HOME/.kube/config --set cloudCore.modules.dynamicController.enable=true
+echo "Setup complete! I advise you to reboot, that way microk8s/kubectl can run without sudo.
+Please continue by adding the edge nodes. After that, return to the controller to activate edgemesh for all the registered nodes"
+
+### ADD EDGE NODES HERE ###
+
+psk_file="$HOME/edgemesh_psk.txt"
+if [[ -f "$psk_file" ]]; then
+psk=$(cat "$psk_file")
+else
+psk=$(openssl rand -base64 32)
+echo "$psk" >> "$psk_file"
+fi
+if sudo microk8s helm3 ls --namespace kubeedge | grep -q 'edgemesh'; then
+helm_cmd="sudo microk8s helm3 upgrade"
+else
+helm_cmd="sudo microk8s helm3 install"
+fi
+helm_cmd+=" edgemesh --namespace kubeedge --set agent.psk=$psk"
+helm_cmd_nodes=( $(sudo kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name},{.status.addresses[?(@.type=="InternalIP")].address}{"\n"}{end}') )
+for i in "${!helm_cmd_nodes[@]}"; do
+IFS=',' read -r hostname ip <<< "${helm_cmd_nodes[$i]}"
+helm_cmd+=" --set agent.relayNodes[$i].nodeName=$hostname,agent.relayNodes[$i].advertiseAddress=\"{$ip}\""
+done
+helm_cmd+=" https://raw.githubusercontent.com/kubeedge/edgemesh/main/build/helm/edgemesh.tgz"
+eval "$helm_cmd"
+
+
+
+
+
+#########################################
+### Total edgecore command copy/paste ###
+#########################################
+wget https://github.com/kubeedge/kubeedge/releases/download/v1.17.0/keadm-v1.17.0-linux-amd64.tar.gz
+tar -zxvf keadm-v1.17.0-linux-amd64.tar.gz
+sudo mkdir -p /usr/local/bin
+sudo cp keadm-v1.17.0-linux-amd64/keadm/keadm /usr/local/bin/keadm
+wget https://github.com/containerd/containerd/releases/download/v1.7.18/containerd-1.7.18-linux-amd64.tar.gz
+sudo tar Cxzvf /usr/local containerd-1.7.18-linux-amd64.tar.gz
+sudo mkdir -p /usr/local/lib/systemd/system
+sudo wget -O /usr/local/lib/systemd/system/containerd.service https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now containerd
+wget https://github.com/opencontainers/runc/releases/download/v1.1.13/runc.amd64
+sudo mkdir -p /usr/local/sbin
+sudo install -m 755 runc.amd64 /usr/local/sbin/runc
+wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz
+sudo mkdir -p /opt/cni/bin
+sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.5.1.tgz
+sudo mkdir -p /etc/cni/net.d/
+sudo sh -c 'cat >/etc/cni/net.d/bridge.conf <<EOF
+{
+  "cniVersion": "0.3.1",
+  "name": "containerd-net",
+  "type": "bridge",
+  "bridge": "cni0",
+  "isGateway": true,
+  "ipMasq": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.88.0.0/16",
+    "routes": [
+      { "dst": "0.0.0.0/0" }
+    ]
+  }
+}
+EOF'
+sudo mkdir -p /etc/containerd
+sudo touch /etc/containerd/config.toml
+sudo sh -c 'containerd config default > /etc/containerd/config.toml'
+sudo systemctl restart containerd
+
+### Next line needs paramaters ###
+### Get token from cloudcore with sudo keadm gettoken --kube-config=$HOME/.kube/config ###
+
+sudo keadm join --cloudcore-ipport="<CLOUD_CONTROLLER_IP>":10000 --token=<token> --kubeedge-version=v1.17.0 --remote-runtime-endpoint=unix:///run/containerd/containerd.sock
+
+###################################
+
+sudo snap install yq
+sudo cat /etc/kubeedge/config/edgecore.yaml | yq '.modules.metaManager.metaServer.enable=true' | sudo tee /etc/kubeedge/config/edgecore.tmp
+sudo mv /etc/kubeedge/config/edgecore.tmp /etc/kubeedge/config/edgecore.yaml
+sudo cat /etc/kubeedge/config/edgecore.yaml | yq '.modules.edged.tailoredKubeletConfig.clusterDNS[0]="169.254.96.16"' | sudo tee /etc/kubeedge/config/edgecore.tmp
+sudo mv /etc/kubeedge/config/edgecore.tmp /etc/kubeedge/config/edgecore.yaml
+sudo cat /etc/kubeedge/config/edgecore.yaml | yq '.modules.edged.tailoredKubeletConfig.clusterDomain="cluster.local"' | sudo tee /etc/kubeedge/config/edgecore.tmp
+sudo mv /etc/kubeedge/config/edgecore.tmp /etc/kubeedge/config/edgecore.yaml
+sudo systemctl daemon-reload
+sudo systemctl restart edgecore.service
+### END ###
