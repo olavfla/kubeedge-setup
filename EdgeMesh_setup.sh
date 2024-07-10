@@ -1,3 +1,4 @@
+#Run on contoller
 psk_file="$HOME/edgemesh_psk.txt"
 
 if [[ -f "$psk_file" ]]; then

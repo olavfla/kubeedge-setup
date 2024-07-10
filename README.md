@@ -38,20 +38,21 @@ Alternativly, you can run the **EdgeCore_setup** script with the --ssh flag (fol
 The microk8s node (the controller) will automatically turn on some basic services such as DNS and calico.
 Calico is a container network interface (CNI) that is required by microk8s nodes in order for them to run pods. This, however, does not work innately on edge nodes, so we use edgemesh instead. The controller will still create malfunctioning calico pods on each edge node. These are not harmful, but can be removed by editing the calico-node daemonset:
 
-`> kubectl edit daemonsets.apps -n kube-system calico-node`
-```yaml
-spec:
-  template:
-    spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-role.kubernetes.io/edge
-                operator: DoesNotExist
-```
+# Setting up the registry
 
-This file is can be quite large, so you might have to scroll a bit to see the full content with the standard vi kube editor.
+Setting up the registry is done in two steps:
+- Setting up the registry on the cloud node
+- Configuring the edge nodes to be able to pull from the insecure registry.
 
-spec.template.spec: should already be present, but you'll have to paste in everything from 'affinity' and down. 
+These must be done in order in order to know the address of the insecure registry.
+*(on controller:)*
+
+`> source Registry_CloudCore.sh`
+
+*(on edge:)*
+
+`> source Registry_EdgeCore.sh <Cloud IP>`
+
+*(registry can be tested from cloud:)*
+
+`> source Registry_test.sh`
