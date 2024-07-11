@@ -58,6 +58,24 @@ These must be done in order in order to know the address of the insecure registr
 
 `> source Registry_test.sh`
 
+## How to upload to the registry with docker.
+
+To upload a new image to the registry, first pull the pull or create the image on the node with the registry:
+
+`sudo docker pull <image>`
+
+Then tag it as follows:
+
+`sudo docker tag <image-id> <registry-ip>:32000/<image-name>:<tag>`
+
+Here, the \<image-name\> and \<tag\> can chosen freely.
+
+Finally, push the image to the registry:
+
+`sudo docker push <registry-ip>:32000/<image-name>:<tag>`
+
+An example of this can be found in the Registry_test.sh script.
+
 # Test rollout and scaling of deployments
 
 Doing this takes very few commands, and there are a lot if things that can be varied, such as number of replicas of the deployments, which image to use, etc.
