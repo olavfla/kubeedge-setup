@@ -25,5 +25,5 @@ server = "http://$REGISTRY_ENDPOINT"
 
 EOF
 kubectl uncordon -l 'node-role.kubernetes.io/edge'
-echo "Setup complete. Continue with Registry_EdgeCore.sh on each of the edge nodes. You can verify that the registry is working by visiting ${REGISTRY_ENDPOINT}/v2/_catalog"
+echo -e "\033[1;36mSetup complete. Continue with \033[0;31mRegistry_EdgeCore.sh\033[1;36m on each of the edge nodes. You can verify that the registry is working by visiting \033[0;31m${REGISTRY_ENDPOINT}/v2/_catalog\033[0m"
 

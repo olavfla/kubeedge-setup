@@ -1,4 +1,5 @@
 #Run on controller
+#Running this will reset the controller, so you'll have to rejoin edge nodes.
 if [ "$#" -ne 1 ]; then
     echo "Usage: source CloudCore_setup.sh <IP>"
     return 1
@@ -31,8 +32,8 @@ ret=$?
 sudo kubectl patch daemonsets.apps -n kube-system calico-node -p '{"spec":{"template":{"spec":{"affinity":{"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/edge","operator":"DoesNotExist"}]}]}}}}}}}'
 sudo kubectl patch deployments.apps -n kube-system coredns -p '{"spec":{"template":{"spec":{"affinity":{"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/edge","operator":"DoesNotExist"}]}]}}}}}}}'
 if [ ${ret} == "0" ]; then
-    echo "Setup complete! I advise you to reboot, that way microk8s/kubectl can run without sudo."
+    echo -e "\033[1;36mSetup complete! I advise you to \033[0;31mreboot\033[1;36m, that way microk8s/kubectl can run without sudo. Some later script depend on this.\033[0m"
     return 1
 else
-    echo "Initializing CloudCore failed..."
+    echo -e "\033[1;36mInitializing CloudCore failed...\033[0m"
 fi

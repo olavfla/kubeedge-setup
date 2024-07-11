@@ -45,6 +45,7 @@ Setting up the registry is done in two steps:
 - Configuring the edge nodes to be able to pull from the insecure registry.
 
 These must be done in order in order to know the address of the insecure registry.
+
 *(on controller:)*
 
 `> source Registry_CloudCore.sh`
@@ -56,3 +57,35 @@ These must be done in order in order to know the address of the insecure registr
 *(registry can be tested from cloud:)*
 
 `> source Registry_test.sh`
+
+# Test rollout and scaling of deployments
+
+Doing this takes very few commands, and there are a lot if things that can be varied, such as number of replicas of the deployments, which image to use, etc.
+
+Instead of making a fully automated script, i will instead include some examples of how to create, scale and update deployments here (with example images) and you can change images or number of replicas as you see fit.
+
+I recommend reading about-kubectl.md for a short intro to kubernetes resources and commands
+
+First off, create a deployment:
+
+`kubectl create deployment alpaca-prod --image=gcr.io/kuar-demo/kuard-amd64:blue --port=8080 --replicas=12`
+
+You can set the number of replicas when creating the deployment, or aftarwards with:
+
+`kubectl scale deployment alpaca-prod --replicas 20`
+
+Then you can trigger an update rollout by editing the deployment and changing the image:
+
+`kubectl patch deployment alpaca-prod -p '{"spec":{"template":{"spec":{"containers":[{"name":"kuard-amd64","image":"gcr.io/kuar-demo/kuard-amd64:green","imagePullPolicy":"Always"}]},"metadata":{"annotations":{"kubernetes.io/change-cause":"Update to kuard green"}}}}}'` 
+
+This will chenge the desired image for the deployment, and it will automatically start the rollout proccess to update the pods to the new image.
+
+And finally view the status of the rollout:
+
+`kubectl rollout status deployments alpaca-prod`
+
+If you want to change the image back and forth, you can use this command to set it back to the 'blue' image:
+
+`kubectl patch deployment alpaca-prod -p '{"spec":{"template":{"spec":{"containers":[{"name":"kuard-amd64","image":"gcr.io/kuar-demo/kuard-amd64:blue","imagePullPolicy":"Always"}]},"metadata":{"annotations":{"kubernetes.io/change-cause":"Update to kuard blue"}}}}}'`
+
+If you want to test this out with the local registry, all you have to do is to swap out the 'image', both when creating and patching the deployment, as well as changing the 'name' field. The name field is important to get right, as it serves as a merge key for the container to be updated. The default name is the name of the image.

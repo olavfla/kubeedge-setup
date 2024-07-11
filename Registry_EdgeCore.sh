@@ -1,6 +1,7 @@
 #Run on edge
+#Must be run after EdgeCore_setup.sh
 if [ "$#" -ne 1 ]; then
-    echo "Usage: source Registry_EdgeCore.sh <IP> (port 32000 is used automatically)"
+    echo "Usage: source Registry_EdgeCore.sh <Registry IP> (should be on controller)"
     return 1
 fi
 REGISTRY_ENDPOINT=$1:32000

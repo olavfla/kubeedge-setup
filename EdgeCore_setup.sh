@@ -1,4 +1,5 @@
 #Run on edge
+#Running this will reset the edge node, so scripts that depend on this one will have to be run again
 if [ "$#" -lt 2 ]; then
     echo "Usage: source EdgeCore_setup.sh <CloudCore IP> <token> | <'--ssh' (user)>"
     return 1
@@ -15,7 +16,8 @@ if [ "$2" == "--ssh" ]; then
     fi
     ret=$?
     if [ ${ret} != "0" ]; then
-      echo "SSH error ${ret}. Exiting..."
+      echo -e "\033[1;36mSSH error \033[0;31m${ret}\033[1;36m. Exiting...\033[0m"
+      echo -e "\033[1;36mIf this failed with \033[0;31mError: secrets \"tokensecret\" not found\033[1;36m or \033[0;31mdial tcp <IP>:16443: connect: connection refused\033[1;36m, the cloud core is not initialized yet. Try again in a couple minutes ore try CloudCore_setup.sh again.\033[0m"
       return 1
     fi
     echo "Token is $token"
