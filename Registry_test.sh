@@ -6,16 +6,6 @@ fi
 kubectl delete deployment alpaca-registry-test
 kubectl delete service alpaca-registry-test
 echo -e "\033[1;36mThis script has a chance to fail. If the registry looks like it works, simply run this script again.\033[0m"
-sudo snap install docker
-REGISTRY_ENDPOINT=$REGISTRY_ENDPOINT:32000
-cat <<EOL > ~/daemon.tmp
-{
-    "log-level":    "error",
-    "insecure-registries" : ["$REGISTRY_ENDPOINT"]
-}
-EOL
-sudo mv ~/daemon.tmp /var/snap/docker/current/config/daemon.json
-sudo snap restart docker
 sleep 5
 sudo docker pull gcr.io/kuar-demo/kuard-amd64:blue
 sudo docker tag $(sudo docker images gcr.io/kuar-demo/kuard-amd64 --format "{{.ID}}") $REGISTRY_ENDPOINT/example-image:registry

@@ -28,6 +28,26 @@ server = "http://$REGISTRY_ENDPOINT"
     capabilities = ["pull", "resolve"]
 
 EOF
+sudo snap install docker
+sudo snap install jq
+
+sudo jq --arg endpoint "$REGISTRY_ENDPOINT" 'if .["insecure-registries"] then
+    if (.["insecure-registries"] | index($endpoint)) == null then
+        .["insecure-registries"] += [$endpoint]
+    else
+        .
+    end
+else
+    .["insecure-registries"] = [$endpoint]
+end' /var/snap/docker/current/config/daemon.json > ~/daemon.tmp && sudo mv ~/daemon.tmp /var/snap/docker/current/config/daemon.json
+
+cat <<EOL > ~/daemon.tmp
+{
+    "log-level":    "error",
+    "insecure-registries" : ["$REGISTRY_ENDPOINT"]
+}
+EOL
+sudo snap restart docker
 kubectl uncordon -l 'node-role.kubernetes.io/edge'
 echo -e "\033[1;36mSetup complete. Continue with \033[0;31mRegistry_EdgeCore.sh\033[1;36m on each of the edge nodes. You can verify that the registry is working by visiting \033[0;31m${REGISTRY_ENDPOINT}/v2/_catalog\033[0m"
 
