@@ -3,6 +3,7 @@ if [ "$#" -ne 1 ]; then
     echo "Usage: source Registry_EdgeCore.sh <Cloud IP>"
     return 1
 fi
+export REGISTRY_ENDPOINT=$1:32000
 kubectl delete deployment alpaca-registry-test
 kubectl delete service alpaca-registry-test
 echo -e "\033[1;36mThis script has a chance to fail. If the registry looks like it works, simply run this script again.\033[0m"

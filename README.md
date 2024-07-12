@@ -44,7 +44,6 @@ Setting up the registry is done in two steps:
 - Setting up the registry on the cloud node
 - Configuring the edge nodes to be able to pull from the insecure registry.
 
-These must be done in order in order to know the address of the insecure registry.
 Make sure to use an IP that the edge nodes can reach.
 
 *(on controller:)*
@@ -57,7 +56,7 @@ Make sure to use an IP that the edge nodes can reach.
 
 *(registry can be tested from cloud:)*
 
-`> source Registry_test.sh`
+`> source Registry_test.sh <Cloud IP>` 
 
 ## How to upload to the registry with docker.
 
@@ -102,6 +101,8 @@ This will chenge the desired image for the deployment, and it will automatically
 And finally view the status of the rollout:
 
 `kubectl rollout status deployments alpaca-prod`
+
+When you do this while measuring network traffic, i recommend waiting until the previous command has finished before issuing any other commands. The `kubectl patch` command will take a while to finish rolling out the new updated image, and the `kubectl rollout` will only exit when the rollout is complete. The traffic generated in this process is very relevant for testing, and probably pretty high as well.
 
 If you want to change the image back and forth, you can use this command to set it back to the 'blue' image:
 
