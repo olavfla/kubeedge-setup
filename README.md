@@ -109,3 +109,21 @@ If you want to change the image back and forth, you can use this command to set 
 `kubectl patch deployment alpaca-prod -p '{"spec":{"template":{"spec":{"containers":[{"name":"kuard-amd64","image":"gcr.io/kuar-demo/kuard-amd64:blue","imagePullPolicy":"Always"}]},"metadata":{"annotations":{"kubernetes.io/change-cause":"Update to kuard blue"}}}}}'`
 
 If you want to test this out with the local registry, all you have to do is to swap out the 'image', both when creating and patching the deployment, as well as changing the 'name' field. The name field is important to get right, as it serves as a merge key for the container to be updated. The default name is the name of the image.
+
+# Daemonsets
+
+Daemonsets are similar to deployments/replicasets in that they maintain a number of pods. The distiction however is that a daemonset ensures that one pod is running on each qualified node. Daemonsets are typically not used for services, but i think it can be practical for our use case (such as each node with sensors running a data collecting proccess).
+
+Unfortunately daemonsets are not as easy to create as deployments, since they are not intended to be used as services. I have made some scripts to make creating a simple daemonset as easy as making a deployment.
+
+**Everything here is run on cloud**
+
+*(to create a new daemonset:)*
+
+`source Daemonset_create.sh <daemonset-name> <image-uri> (optional <port>)`
+
+*(then to create a service to access it:)*
+
+`source Daemonset_expose.sh <daemonset-name>`
+
+Now you can run `kubectl get service` to see which IP you can access the service from.
