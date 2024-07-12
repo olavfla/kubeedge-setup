@@ -15,3 +15,4 @@ sudo sed -i -e "$((CONFIG_LINE+1)), $((CONFIG_LINE+2))s/^        .*$//" \
     /etc/containerd/config.toml
 cat /etc/containerd/config.toml | grep -A 3 '\[plugins."io.containerd.grpc.v1.cri".registry.mirrors\]' -n
 sudo systemctl restart containerd.service
+sudo systemctl daemon-reload

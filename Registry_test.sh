@@ -1,13 +1,12 @@
 #Run on controller
+if [ "$#" -ne 1 ]; then
+    echo "Usage: source Registry_EdgeCore.sh <Cloud IP>"
+    return 1
+fi
 kubectl delete deployment alpaca-registry-test
 kubectl delete service alpaca-registry-test
 echo -e "\033[1;36mThis script has a chance to fail. If the registry looks like it works, simply run this script again.\033[0m"
 sudo snap install docker
-export REGISTRY_ENDPOINT=$(kubectl get pods -n container-registry -o jsonpath={.items[0].status.hostIP})
-if [ -z "$REGISTRY_ENDPOINT" ]; then
-    echo "Unable to find registry"
-    return 1
-fi
 REGISTRY_ENDPOINT=$REGISTRY_ENDPOINT:32000
 cat <<EOL > ~/daemon.tmp
 {
