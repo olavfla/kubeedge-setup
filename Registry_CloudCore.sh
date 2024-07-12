@@ -1,5 +1,9 @@
 #Run on controller
 #Tear down
+if [ "$#" -ne 1 ]; then
+    echo "Usage: source Registry_CloudCore.sh <Cloud IP>"
+    return 1
+fi
 microk8s disable registry
 microk8s disable hostpath-storage:destroy-storage
 #Set up
@@ -7,14 +11,14 @@ kubectl cordon -l 'node-role.kubernetes.io/edge'
 microk8s enable registry
 sleep 10
 #Find the registry
-export REGISTRY_ENDPOINT=$(kubectl get pods -n container-registry -o jsonpath={.items[0].status.hostIP})
-while [ -z "$REGISTRY_ENDPOINT" ]; 
+export REGISTRY_ENDPOINT=$1
+while [ -z "$REGISTRY_READY" ]; 
 do
     sleep 5
-    export REGISTRY_ENDPOINT=$(kubectl get pods -n container-registry -o jsonpath={.items[0].status.hostIP})
+    export REGISTRY_READY=$(kubectl get pods -n container-registry -o jsonpath={.items[0].status.hostIP})
 done
 REGISTRY_ENDPOINT=$REGISTRY_ENDPOINT:32000
-echo "Registry found at $REGISTRY_ENDPOINT"
+echo "Registry ready"
 #Configure
 mkdir -p /var/snap/microk8s/current/args/certs.d/$REGISTRY_ENDPOINT
 cat <<EOF > /var/snap/microk8s/current/args/certs.d/$REGISTRY_ENDPOINT/hosts.toml

@@ -45,10 +45,11 @@ Setting up the registry is done in two steps:
 - Configuring the edge nodes to be able to pull from the insecure registry.
 
 These must be done in order in order to know the address of the insecure registry.
+Make sure to use an IP that the edge nodes can reach.
 
 *(on controller:)*
 
-`> source Registry_CloudCore.sh`
+`> source Registry_CloudCore.sh <Cloud IP>`
 
 *(on edge:)*
 
