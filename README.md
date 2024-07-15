@@ -66,13 +66,11 @@ To upload a new image to the registry, first pull the pull or create the image o
 
 Then tag it as follows:
 
-`sudo docker tag <image-id> <IP>:<port>/<image-name>:<tag>`
+`sudo docker tag <image-id> <Service IP>:5000/<image-name>:<tag>`
 
 Here, the \<image-name\> and \<tag\> can chosen freely.
 
-For IP and port you have two options: Service IP or node IP.
-- View the service IP with `kubectl get service -n container-registry registry`. If using this, use port 5000.
-- Node ID is the IP of the controller node. If using this, use port 32000.
+View the service IP with `kubectl get service -n container-registry registry`.
 
 Finally, push the image to the registry:
 
