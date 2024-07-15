@@ -36,7 +36,7 @@ Alternativly, you can run the **EdgeCore_setup** script with the --ssh flag (fol
 
 ## Notes
 The microk8s node (the controller) will automatically turn on some basic services such as DNS and calico.
-Calico is a container network interface (CNI) that is required by microk8s nodes in order for them to run pods. This, however, does not work innately on edge nodes, so we use edgemesh instead. The controller will still create malfunctioning calico pods on each edge node. These are not harmful, but can be removed by editing the calico-node daemonset:
+Calico is a container network interface (CNI) that is required by microk8s nodes in order for them to run pods. This, however, does not work innately on edge nodes, so we use edgemesh instead. The controller will still create malfunctioning calico pods on each edge node. Removal of these have been moved into CloudCore_setup.sh
 
 # Setting up the registry
 
@@ -44,15 +44,13 @@ Setting up the registry is done in two steps:
 - Setting up the registry on the cloud node
 - Configuring the edge nodes to be able to pull from the insecure registry.
 
-These must be done in order since the registry setup generates the Sevice IP used in Registry_EdgeCore.sh
-
 *(on controller:)*
 
 `> source Registry_CloudCore.sh`
 
 *(on edge:)*
 
-`> source Registry_EdgeCore.sh <Service IP>`
+`> source Registry_EdgeCore.sh`
 
 *(registry can be tested from cloud:)*
 
@@ -66,15 +64,14 @@ To upload a new image to the registry, first pull the pull or create the image o
 
 Then tag it as follows:
 
-`sudo docker tag <image-id> <Service IP>:5000/<image-name>:<tag>`
+`sudo docker tag <image-id> 127.0.0.1:32000/<image-name>:<tag>`
 
 Here, the \<image-name\> and \<tag\> can chosen freely.
 
-View the service IP with `kubectl get service -n container-registry registry`.
 
 Finally, push the image to the registry:
 
-`sudo docker push <IP>:<port>/<image-name>:<tag>`
+`sudo docker push 127.0.0.1:32000/<image-name>:<tag>`
 
 An example of this can be found in the Registry_test.sh script.
 

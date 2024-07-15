@@ -5,7 +5,7 @@ microk8s disable hostpath-storage:destroy-storage
 #Set up
 kubectl cordon -l 'node-role.kubernetes.io/edge'
 microk8s enable registry
-export REGISTRY_ENDPOINT=$(kubectl get service -n container-registry registry -o jsonpath={.spec.clusterIP}):5000
+export REGISTRY_ENDPOINT="127.0.0.1:32000"
 mkdir -p /var/snap/microk8s/current/args/certs.d/$REGISTRY_ENDPOINT
 cat <<EOF > /var/snap/microk8s/current/args/certs.d/$REGISTRY_ENDPOINT/hosts.toml
 server = "http://$REGISTRY_ENDPOINT"
