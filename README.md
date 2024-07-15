@@ -44,19 +44,19 @@ Setting up the registry is done in two steps:
 - Setting up the registry on the cloud node
 - Configuring the edge nodes to be able to pull from the insecure registry.
 
-Make sure to use an IP that the edge nodes can reach.
+These must be done in order since the registry setup generates the Sevice IP used in Registry_EdgeCore.sh
 
 *(on controller:)*
 
-`> source Registry_CloudCore.sh <Cloud IP>`
+`> source Registry_CloudCore.sh`
 
 *(on edge:)*
 
-`> source Registry_EdgeCore.sh <Cloud IP>`
+`> source Registry_EdgeCore.sh <Service IP>`
 
 *(registry can be tested from cloud:)*
 
-`> source Registry_test.sh <Cloud IP>` 
+`> source Registry_test.sh` 
 
 ## How to upload to the registry with docker.
 
@@ -66,15 +66,21 @@ To upload a new image to the registry, first pull the pull or create the image o
 
 Then tag it as follows:
 
-`sudo docker tag <image-id> <registry-ip>:32000/<image-name>:<tag>`
+`sudo docker tag <image-id> <IP>:<port>/<image-name>:<tag>`
 
 Here, the \<image-name\> and \<tag\> can chosen freely.
 
+For IP and port you have two options: Service IP or node IP.
+- View the service IP with `kubectl get service -n container-registry registry`. If using this, use port 5000.
+- Node ID is the IP of the controller node. If using this, use port 32000.
+
 Finally, push the image to the registry:
 
-`sudo docker push <registry-ip>:32000/<image-name>:<tag>`
+`sudo docker push <IP>:<port>/<image-name>:<tag>`
 
 An example of this can be found in the Registry_test.sh script.
+
+When setting the image in your cloud applications, you must use the Service IP. Otherwise, the image will fail to pull.
 
 # Test rollout and scaling of deployments
 
