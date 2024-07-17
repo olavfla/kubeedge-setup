@@ -128,3 +128,9 @@ Unfortunately daemonsets are not as easy to create as deployments, since they ar
 `source Daemonset_expose.sh <daemonset-name>`
 
 Now you can run `kubectl get service` to see which IP you can access the service from.
+
+*(examples:)*
+
+`source Daemonset_create.sh alpaca-daemonset gcr.io/kuar-demo/kuard-amd64:blue 8080`
+
+`source Daemonset_expose.sh alpaca-daemonset`
