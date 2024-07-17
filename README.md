@@ -117,7 +117,7 @@ Daemonsets are similar to deployments/replicasets in that they maintain a number
 
 Unfortunately daemonsets are not as easy to create as deployments, since they are not intended to be used as services. I have made some scripts to make creating a simple daemonset as easy as making a deployment.
 
-**Everything here is run on cloud**
+**Everything here is run on controller**
 
 *(to create a new daemonset:)*
 
