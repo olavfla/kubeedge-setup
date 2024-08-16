@@ -1,3 +1,5 @@
+### THIS SCRIPT IS OLD! USE SEPARATE SCRIPTS! ###
+
 Set up cloudcore (controller) (with microk8s?)
 1. Install microk8s
 	snap install microk8s --classic --channel=1.30
